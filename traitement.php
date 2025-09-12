@@ -76,4 +76,26 @@ foreach($emailsValides as $email){
     fwrite($ficherV, $email . "\n");
 }
 fclose($fichierV);
+
+//Séparation des emails par domaine
+$emailsSepares = [];
+foreach($emailsValides as $email){
+    // positionner le @
+    $position = strpos($email, "@");
+    //extraire le domaine
+    $domaine = substr($email, $position +1); //la fonction substr permet l'extraction d'une partie d'une chaine de caracteres
+    if(!isset($emailsSepares[$domaine])){
+        $emailsSepares[$domaine] = [];
+    }
+    $emailsSepares[$domaine][] = $email;
+}
+//Création des fichiers par domaine
+foreach($emailsSepares as $domaine => $liste){
+    $nom = "emailDeDomaine_" .$domaine . ".txt";
+    $fichier=fopen($nom, "w");
+    foreach($liste as $email){
+        fwrite($fichier, $email . "\n");
+    }
+    fclose($fichier);
+}
 ?>
