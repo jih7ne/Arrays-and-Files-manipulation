@@ -73,7 +73,7 @@ $emailsValides = supprimerDoublons($emailsValides);
 $emailsValides = trierEmails($emailsValides);
 $fichierV = fopen("EmailsT.txt", "w");
 foreach($emailsValides as $email){ 
-    fwrite($ficherV, $email . "\n");
+    fwrite($fichierV, $email . "\n");
 }
 fclose($fichierV);
 
