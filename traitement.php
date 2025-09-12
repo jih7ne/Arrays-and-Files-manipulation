@@ -23,4 +23,22 @@ foreach($T as $email) {
 }
 return $new;
 }
+
+//Fonction pour trier les emails
+function trierEmails($T){
+    $taille = count($T);
+    for ($i = 0; $i < $taille -1; $i++){
+        for ($j = $i +1; $j < $taille; $j++){
+            if ($T[$i] > $T[$j]){
+                $temp = $T[$i];
+                $T[$i] = $T[$j];
+                $T[$j] = $temp;
+            }
+        
+
+        }
+    }
+    return $T;
+}
+
 ?>
