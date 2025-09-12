@@ -8,7 +8,7 @@ function validerEmail($email){
 
 //Fonction pour supprimer les doublons
 function supprimerDoublons($T){
-$new = [];
+$new = []; //nouveau tableau 
 foreach($T as $email) {
     $existe = false;
     foreach($new as $element){
@@ -40,5 +40,40 @@ function trierEmails($T){
     }
     return $T;
 }
+// lecture du fichier
+$emailsValides = [];
+$emailsInvalides = [];
+$fichier = fopen("Emails.txt", "r");
+if($fichier){
+    while(($ligne = fgets($fichier)) !== false){
+        $ligne = rtrim($ligne, "\r\n"); //pour enlever les sauts de ligne
+        if(validerEmail($ligne))
+            {
+                $emailsValides[] = $ligne;
+            }
+            else{
+                $emailsInvalides[] = $ligne;
+            }
+    }
+    fclose($fichier);
+}
+else{
+    echo "Erreur lors de l'ouverture du fichier.";
+    exit;
+}
 
+//Création du fichier des emails invalides
+$fichierInv = fopen("adressesNonValides.txt", "w");
+foreach($emailsInvalides as $email){ 
+    fwrite($ficherInv, $email . "\n");
+}
+fclose($fichierInv);
+//Création du fichier des emails valides sans doublons et triés
+$emailsValides = supprimerDoublons($emailsValides);
+$emailsValides = trierEmails($emailsValides);
+$fichierV = fopen("EmailsT.txt", "w");
+foreach($emailsValides as $email){ 
+    fwrite($ficherV, $email . "\n");
+}
+fclose($fichierV);
 ?>
