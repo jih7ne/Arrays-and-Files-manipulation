@@ -3,7 +3,7 @@
 // Fonction pour valider une adresse email
 function validerEmail($email){
     $reg = "/^[a-zA-Z0-9._-]+@[a-z0-9._-]{2,}\.[a-z]{2,4}$/";
-    return preg_match($reg, $email) === 1;
+    return preg_match($reg, $email) === 1; //pour s'assurer que c'est soit 0 soit 1
 }
 
 // Fonction pour supprimer les doublons
@@ -39,14 +39,14 @@ function trierEmails($T){
     return $T;
 }
 
-// Lecture du fichier Emails.txt
+// Lecture du fichier 
 $emailsValides = [];
 $emailsInvalides = [];
 
 $fichier = fopen("Emails.txt", "r");
 if($fichier){
     while(($ligne = fgets($fichier)) !== false){
-        $ligne = rtrim($ligne, "\r\n");
+        $ligne = rtrim($ligne, "\r\n"); //pour enlever les sauts de ligne
         if(validerEmail($ligne)){
             $emailsValides[] = $ligne;
         } else {
@@ -55,7 +55,8 @@ if($fichier){
     }
     fclose($fichier);
 } else {
-    die("Erreur lors de l'ouverture du fichier Emails.txt");
+    echo "Erreur lors de l'ouverture du fichier.";
+    exit();
 }
 
 // Fichier des emails invalides
@@ -65,7 +66,7 @@ foreach($emailsInvalides as $email){
 }
 fclose($fichierInv);
 
-// Fichier des emails valides triés et sans doublons
+//Création du fichier des emails valides sans doublons et triés
 $emailsValides = supprimerDoublons($emailsValides);
 $emailsValides = trierEmails($emailsValides);
 
@@ -75,11 +76,13 @@ foreach($emailsValides as $email){
 }
 fclose($fichierV);
 
-// Séparation par domaine
+//Séparation des emails par domaine
 $emailsSepares = [];
 foreach($emailsValides as $email){
+     // positionner le @
     $position = strpos($email, "@");
-    $domaine = substr($email, $position + 1);
+    //extraire le domaine
+    $domaine = substr($email, $position + 1); //la fonction substr permet l'extraction d'une partie d'une chaine de caracteres
     if(!isset($emailsSepares[$domaine])){
         $emailsSepares[$domaine] = [];
     }
