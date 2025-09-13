@@ -38,6 +38,16 @@ function trierEmails($T){
     }
     return $T;
 }
+//uplod du fichier
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_FILES['file'])) {
+    $target = "Emails.txt"; 
+    if (move_uploaded_file($_FILES['file']['tmp_name'], $target)) {
+        echo "Fichier uploadé avec succès<br>";
+    } else {
+        echo "Erreur lors de l’upload du fichie.<br>";
+        exit();
+    }
+}
 
 // Lecture du fichier 
 $emailsValides = [];
@@ -66,7 +76,7 @@ foreach($emailsInvalides as $email){
 }
 fclose($fichierInv);
 
-//Création du fichier des emails valides sans doublons et triés
+//Creation du fichier des emails valides sans doublons et tries
 $emailsValides = supprimerDoublons($emailsValides);
 $emailsValides = trierEmails($emailsValides);
 
@@ -76,7 +86,7 @@ foreach($emailsValides as $email){
 }
 fclose($fichierV);
 
-//Séparation des emails par domaine
+//Separation des emails par domaine
 $emailsSepares = [];
 foreach($emailsValides as $email){
      // positionner le @
@@ -98,4 +108,85 @@ foreach($emailsSepares as $domaine => $liste){
     }
     fclose($f);
 }
+
+
+
+//Ajouter un email
+if (isset($_POST['action']) && $_POST['action'] === "ajouter") {
+    //on recupere l email
+    $email = $_POST['email']; 
+
+    // verification cote serveur
+    if (!validerEmail($email)) {
+        echo "Adresse email invalide";
+        exit();
+    }
+
+    //Parcours du fichiers contenant les emails valides triés
+    $emails = [];
+    $f = fopen("EmailsT.txt", "r");
+    if ($f) {
+        while (($ligne = fgets($f)) !== false) {
+            $ligne = rtrim($ligne, "\r\n"); // enlever retour à la ligne
+            if ($ligne !== "") {
+                $emails[] = $ligne;
+            }
+        }
+        fclose($f);
+    }
+
+    // verifier si l email existe deja (cote serveur)
+    $existe = false;
+    foreach ($emails as $em) {
+        if ($em === $email) {
+            $existe = true;
+            break;
+        }
+    }
+
+    if ($existe) {
+        echo "Cet email existe déjà";
+        exit();
+    }
+
+    // Ajouter et trier
+    $emails[] = $email;
+    $emails = trierEmails($emails);
+
+    
+    $f = fopen("EmailsT.txt", "w");
+    foreach ($emails as $em) {
+        fwrite($f, $em . "\n");
+    }
+    fclose($f);
+
+    echo " Email ajouté avec succès ";
+}
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Résultat du traitement</title>
+
+</head>
+<body>
+    <h2> Traitement terminé avec succès !</h2>
+    <p>Les fichiers générés :</p>
+    <ul>
+        <li><a href="EmailsT.txt" download>EmailsT.txt</a></li>
+        <li><a href="adressesNonValides.txt" download>adressesNonValides.txt</a></li>
+        <?php
+        // afficher dynamiquement les fichiers créés par domaine
+        $domaineFiles = glob("emailDeDomaine_*.txt"); //glob pour chercher les fichiers qui suivent la meme pattern
+        foreach($domaineFiles as $fichierDomaine){
+            $nomFichier = basename($fichierDomaine); //basename() pour avoir juste le nom du fichier au lieu de son path
+            echo "<li><a href='$nomFichier' download>$nomFichier</a></li>";
+        }
+        ?>
+    </ul>
+    <a href="index.html"><button>Retour à l'accueil</button></a>
+</body>
+</html>
+
+
