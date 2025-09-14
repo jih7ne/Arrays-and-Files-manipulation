@@ -19,38 +19,6 @@
     <input type="file" name="file" required><br>
     <input type="submit" value="Envoyer">
 </form>
-<!-- Formulaire pour ajouter une nouvelle adresse email -->
-<h2>Ajouter une adresse email</h2>
-<form action="traitement.php" method="post" onsubmit="return validerFormulaire()">
-    <label for="email">Nouvel email :</label><br>
-    <input type="email" name="email" id="email" required><br>
-    <input type="submit" value="Ajouter">
-</form>
-
-<script>
-// Vérification côté client avec JavaScript
-function validerFormulaire() {
-    let email = document.getElementById("email").value;
-    let regex = /^[a-zA-Z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-
-    if (!regex.test(email)) {
-        alert("Adresse email invalide !");
-        return false;
-    }
-    return true;
-}
-</script>
-<!-- Formulaire pour envoyer un message -->
-<h2>Envoyer un message à tous les emails</h2>
-<form action="envoyerMail.php" method="post">
-    <label for="sujet">Sujet :</label><br>
-    <input type="text" name="sujet" id="sujet" required><br><br>
-
-    <label for="message">Message :</label><br>
-    <textarea name="message" id="message" rows="5" cols="40" required></textarea><br>
-    
-    <input type="submit" value="Envoyer à tous">
-</form>
 
 </body>
 </html>
