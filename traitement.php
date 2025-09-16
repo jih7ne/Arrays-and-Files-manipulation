@@ -53,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_FILES['file'])) {
 $emailsValides = [];
 $emailsInvalides = [];
 
-$fichier = fopen("Emails.txt", "r");
+$fichier = fopen($target, "r");
 if($fichier){
     while(($ligne = fgets($fichier)) !== false){
         $ligne = rtrim($ligne, "\r\n"); //pour enlever les sauts de ligne
