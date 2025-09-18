@@ -106,12 +106,39 @@ if (isset($_POST['action']) && $_POST['action'] === "ajouter") {
     $emails[] = $email;
     $emails = trierEmails($emails);
 
+    // update EmailsT.txt
     file_put_contents("EmailsT.txt", implode("\n", $emails) . "\n");
+
+    // suppression des anciens fuciers
+    $oldDomainFiles = glob("emailDeDomaine_*.txt");
+    foreach ($oldDomainFiles as $f) {
+        unlink($f);
+    }
+
+    // creation des fichiers par domaine
+    $emailsSepares = [];
+    foreach ($emails as $em) {
+        $domaine = substr(strrchr($em, "@"), 1);
+        if (!isset($emailsSepares[$domaine])) {
+            $emailsSepares[$domaine] = [];
+        }
+        $emailsSepares[$domaine][] = $em;
+    }
+
+    foreach ($emailsSepares as $domaine => $liste) {
+        $nom = "emailDeDomaine_" . $domaine . ".txt";
+        $f = fopen($nom, "w");
+        foreach ($liste as $em) {
+            fwrite($f, $em . "\n");
+        }
+        fclose($f);
+    }
 
     echo "Email ajouté avec succès";
 }
 
-// ---- Envoi d’emails avec PHPMailer ----
+
+//  Envoi d’emails avec PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 require 'PHPMailer/src/Exception.php';
