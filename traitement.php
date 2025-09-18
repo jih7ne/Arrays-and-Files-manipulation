@@ -25,7 +25,7 @@ function trierEmails($T){
 // Lecture du fichier emails.txt 
 $target = "emails.txt"; 
 if (file_exists($target)) {
-    // Nettoyer les anciens fichiers générés
+    // Nettoyer les anciens fichiers 
 $files = glob("EmailsT.txt"); 
 foreach($files as $f) { unlink($f); }
 
@@ -71,19 +71,20 @@ foreach($files as $f) { unlink($f); }
     // Séparation par domaine
     $emailsSepares = [];
     foreach($emailsValides as $email){
-        $domaine = substr(strrchr($email, "@"), 1);
+        $domaine = substr(strrchr($email, "@"), 1); //strrchr recupere tous ce qui est apres @
+        //substr enleve le @ et ne garde que le domaine
         if(!isset($emailsSepares[$domaine])){
             $emailsSepares[$domaine] = [];
         }
         $emailsSepares[$domaine][] = $email;
     }
 
-    // Création des fichiers par domaine
+    // les fichiers par domaine
     foreach($emailsSepares as $domaine => $liste){
-        $nom = "emailDeDomaine_" . $domaine . ".txt";
+        $nom = "emailDeDomaine_" . $domaine . ".txt"; // . pour la concatenation
         $f = fopen($nom, "w");
         foreach($liste as $email){
-            fwrite($f, $email . "\n");
+            fwrite($f, $email . "\n"); //saut de ligne
         }
         fclose($f);
     }
@@ -107,10 +108,11 @@ if (isset($_POST['action']) && $_POST['action'] === "ajouter") {
     $emails = trierEmails($emails);
 
     // update EmailsT.txt
-    file_put_contents("EmailsT.txt", implode("\n", $emails) . "\n");
+    file_put_contents("EmailsT.txt", implode("\n", $emails) . "\n"); //implode pour transformer le tableau en chaine de caracteres
+
 
     // suppression des anciens fuciers
-    $oldDomainFiles = glob("emailDeDomaine_*.txt");
+    $oldDomainFiles = glob("emailDeDomaine_*.txt"); //glob pour recuperer tous les ficiers commencant par l expression en parametres
     foreach ($oldDomainFiles as $f) {
         unlink($f);
     }
@@ -139,6 +141,7 @@ if (isset($_POST['action']) && $_POST['action'] === "ajouter") {
 
 
 //  Envoi d’emails avec PHPMailer
+//Importation des classes phpmailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 require 'PHPMailer/src/Exception.php';
@@ -147,33 +150,32 @@ require 'PHPMailer/src/SMTP.php';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['sujet']) && !empty($_POST['message'])) {
     $sujet = $_POST['sujet'];
-    $message = $_POST['message'];
-
+    $message = $_POST['message'];// on s assure que les champs sont remplies
     $emails = file("EmailsT.txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-    if (empty($emails)) {
+    if (empty($emails)) { //si le fichier est vide (aka aucune adresse n est valide)
         echo "Aucun email valide";
         exit();
     }
 
     $mail = new PHPMailer(true);
     try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = '0theentirepopulationoftexas0@gmail.com'; 
-        $mail->Password   = 'vzkn jdjs jtta cdnp'; 
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
+        $mail->isSMTP(); //protocole SMTP
+        $mail->Host       = 'smtp.gmail.com'; //Serveur SMTP de gmail
+        $mail->SMTPAuth   = true; //authentification activee
+        $mail->Username   = '0theentirepopulationoftexas0@gmail.com'; //email diali
+        $mail->Password   = 'vzkn jdjs jtta cdnp'; // app password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; //securite tls
+        $mail->Port       = 587; //port smtp pour tls
 
         $mail->setFrom('0theentirepopulationoftexas0@gmail.com', 'TP0');
         foreach ($emails as $email) {
-            $mail->addBCC($email);
+            $mail->addBCC($email); //envoi en bcc for keeping the users private
         }
 
         $mail->isHTML(true);
         $mail->Subject = $sujet;
-        $mail->Body    = nl2br($message);
+        $mail->Body    = nl2br($message); // suat de ligne en balise <br>
         $mail->AltBody = $message;
 
         $mail->send();
@@ -212,12 +214,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['sujet']) && !empty($
 <form action="traitement.php" method="post" onsubmit="return validerFormulaire()">
     <input type="hidden" name="action" value="ajouter">
     <label for="email">Nouvel email :</label><br>
-    <input type="email" name="email" id="email" required><br>
+<!--type email verification en html-->  <input type="email" name="email" id="email" required><br> <!--required pour ne pas envoyer un formulaire empty-->
     <input type="submit" value="Ajouter">
 </form>
 
 <script>
-function validerFormulaire() {
+function validerFormulaire() { //verification cote client (JS)
     let email = document.getElementById("email").value;
     let regex = /^[a-zA-Z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
     if (!regex.test(email)) {
