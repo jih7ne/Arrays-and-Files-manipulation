@@ -2,16 +2,18 @@
 session_start(); //demarrer unesession pour pour garder l etat entre les pages 
 
 // Fonction pour valider une adresse email
-function validerEmail($email){
+function validerEmail($email)
+{
     $reg = "/^[a-zA-Z0-9._-]+@[a-z0-9._-]{2,}\.[a-z]{2,4}$/";
     return preg_match($reg, $email) === 1;  //verifier si l email follows the same pattern
 }
 
 // Fonction pour supprimer les doublons
-function supprimerDoublons($T){
+function supprimerDoublons($T)
+{
     $new = [];
-    foreach($T as $email) {
-        if(!in_array($email, $new)){
+    foreach ($T as $email) {
+        if (!in_array($email, $new)) {
             $new[] = $email;
         }
     }
@@ -19,27 +21,35 @@ function supprimerDoublons($T){
 }
 
 // Fonction pour trier les emails
-function trierEmails($T){
+function trierEmails($T)
+{
     sort($T);
     return $T;
 }
 
 // Fonction pour generer un token de vérification
-function genererTokenVerification() {
+function genererTokenVerification()
+{
     return bin2hex(random_bytes(32)); // secured token de 64 caracteres
+}
+
+function fileInFilesDir(string $filename){
+    return __DIR__ . "/files/" . $filename;
 }
 
 // Envoi de lien de verification 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+
 require 'PHPMailer/src/Exception.php';
 require 'PHPMailer/src/PHPMailer.php';
 require 'PHPMailer/src/SMTP.php';
 
-function envoyerLienVerification($email, $token) {
+function envoyerLienVerification($email, $token)
+{
     //building le lien de verification avec le token et l emaul
     $lien_verification = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[SCRIPT_NAME]?action=verifier&token=$token&email=" . urlencode($email);
-    
+
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
@@ -52,7 +62,7 @@ function envoyerLienVerification($email, $token) {
 
         $mail->setFrom('0theentirepopulationoftexas0@gmail.com', 'TP0');
         $mail->addAddress($email);
-        
+
         $mail->isHTML(true);
         $mail->Subject = 'Vérification de votre adresse email';
         $mail->Body    = "
@@ -76,32 +86,34 @@ function envoyerLienVerification($email, $token) {
 if (isset($_GET['action']) && $_GET['action'] === 'verifier' && isset($_GET['token']) && isset($_GET['email'])) {
     $email = urldecode($_GET['email']);
     $token = $_GET['token'];
-    
+
     // verifier si le token est valide et not outdated
-    if (isset($_SESSION['tokens_verification'][$email]) && 
+    if (
+        isset($_SESSION['tokens_verification'][$email]) &&
         $_SESSION['tokens_verification'][$email]['token'] === $token &&
-        time() < $_SESSION['tokens_verification'][$email]['expiration']) {
-        
+        time() < $_SESSION['tokens_verification'][$email]['expiration']
+    ) {
+
         // Ajouter l email au fichier
-        if (file_exists("EmailsT.txt")) {
-            $emails = file("EmailsT.txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (file_exists(fileInFilesDir("EmailsT.txt"))) {
+            $emails = file(fileInFilesDir("EmailsT.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         } else {
             $emails = [];
         }
-        
+
         if (!in_array($email, $emails)) {
             $emails[] = $email;
             $emails = trierEmails($emails);
-            
+
             // update EmailsT.txt
-            file_put_contents("EmailsT.txt", implode("\n", $emails) . "\n");
-            
+            file_put_contents(fileInFilesDir("EmailsT.txt"), implode("\n", $emails) . "\n");
+
             // Supprimer les anciens fichiers de domaine
-            $oldDomainFiles = glob("emailDeDomaine_*.txt");
+            $oldDomainFiles = glob(fileInFilesDir("emailDeDomaine_*.txt"));
             foreach ($oldDomainFiles as $f) {
                 unlink($f);
             }
-            
+
             // Recreer les fichiers par domaine
             $emailsSepares = [];
             foreach ($emails as $em) {
@@ -111,25 +123,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'verifier' && isset($_GET['tok
                 }
                 $emailsSepares[$domaine][] = $em;
             }
-            
+
             foreach ($emailsSepares as $domaine => $liste) {
-                $nom = "emailDeDomaine_" . $domaine . ".txt";
+                $nom = fileInFilesDir("emailDeDomaine_" . $domaine . ".txt");
                 $f = fopen($nom, "w");
+                //var_dump($nom);
                 foreach ($liste as $em) {
                     fwrite($f, $em . "\n");
                 }
                 fclose($f);
             }
         }
-        
+
         // Supprimer le token utilise
         unset($_SESSION['tokens_verification'][$email]);
-        
+
         $_SESSION['message_ajout'] = "Email verifie et ajoute avec succes!";
     } else {
         $_SESSION['message_ajout'] = "Lien de verification invalide ou expire";
     }
-    
+
     header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
     exit();
 }
@@ -139,33 +152,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fichierEmails'])) {
     if ($_FILES['fichierEmails']['error'] === UPLOAD_ERR_OK) {
         $tmpName = $_FILES['fichierEmails']['tmp_name'];
         $fileName = $_FILES['fichierEmails']['name'];
-        
+
         // verifier l extension
         $extension = pathinfo($fileName, PATHINFO_EXTENSION);
         if (strtolower($extension) === 'txt') {
-            move_uploaded_file($tmpName, 'emails.txt');
+            move_uploaded_file($tmpName, fileInFilesDir("emails.txt"));
             $messageUpload = "Fichier uploadé avec succès!";
-            
+
             // Traiter le fichier 
-            $target = "emails.txt"; 
+            $target = fileInFilesDir("emailsT.txt");
             if (file_exists($target)) {
                 // Nettoyer les anciens fichiers 
-                $files = glob("EmailsT.txt"); 
-                foreach($files as $f) { unlink($f); }
+                $files = glob(fileInFilesDir("EmailsT.txt"));
+                foreach ($files as $f) {
+                    unlink($f);
+                }
 
-                $files = glob("adressesNonValides.txt"); 
-                foreach($files as $f) { unlink($f); }
+                $files = glob(fileInFilesDir("adressesNonValides.txt"));
+                foreach ($files as $f) {
+                    unlink($f);
+                }
 
-                $files = glob("emailDeDomaine_*.txt"); 
-                foreach($files as $f) { unlink($f); }
+                $files = glob(fileInFilesDir("emailDeDomaine_*.txt"));
+                foreach ($files as $f) {
+                    unlink($f);
+                }
 
                 $emailsValides = [];
                 $emailsInvalides = [];
                 $fichier = fopen($target, "r");
-                if($fichier){
-                    while(($ligne = fgets($fichier)) !== false){
+                if ($fichier) {
+                    while (($ligne = fgets($fichier)) !== false) {
                         $ligne = rtrim($ligne, "\r\n");
-                        if(validerEmail($ligne)){
+                        if (validerEmail($ligne)) {
                             $emailsValides[] = $ligne;
                         } else {
                             $emailsInvalides[] = $ligne;
@@ -175,8 +194,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fichierEmails'])) {
                 }
 
                 // Fichier des emails invalides
-                $fichierInv = fopen("adressesNonValides.txt", "w");
-                foreach($emailsInvalides as $email){
+                $fichierInv = fopen(fileInFilesDir("adressesNonValides.txt"), "w");
+                foreach ($emailsInvalides as $email) {
                     fwrite($fichierInv, $email . "\n");
                 }
                 fclose($fichierInv);
@@ -185,27 +204,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fichierEmails'])) {
                 $emailsValides = supprimerDoublons($emailsValides);
                 $emailsValides = trierEmails($emailsValides);
 
-                $fichierV = fopen("EmailsT.txt", "w");
-                foreach($emailsValides as $email){
+                $fichierV = fopen(fileInFilesDir("EmailsT.txt"), "w");
+                foreach ($emailsValides as $email) {
                     fwrite($fichierV, $email . "\n");
                 }
                 fclose($fichierV);
 
                 // Separation par domaine
                 $emailsSepares = [];
-                foreach($emailsValides as $email){
+                foreach ($emailsValides as $email) {
                     $domaine = substr(strrchr($email, "@"), 1);
-                    if(!isset($emailsSepares[$domaine])){
+                    if (!isset($emailsSepares[$domaine])) {
                         $emailsSepares[$domaine] = [];
                     }
                     $emailsSepares[$domaine][] = $email;
                 }
 
                 // les fichiers par domaine
-                foreach($emailsSepares as $domaine => $liste){
-                    $nom = "emailDeDomaine_" . $domaine . ".txt";
+                foreach ($emailsSepares as $domaine => $liste) {
+                    $nom = fileInFilesDir("emailDeDomaine_" . $domaine . ".txt");
                     $f = fopen($nom, "w");
-                    foreach($liste as $email){
+                    foreach ($liste as $email) {
                         fwrite($f, $email . "\n");
                     }
                     fclose($f);
@@ -221,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fichierEmails'])) {
 
 // Traitement de la demande d'ajout d'email
 if (isset($_POST['action']) && $_POST['action'] === "demander_ajout") {
-    $email = $_POST['email']; 
+    $email = $_POST['email'];
     if (!validerEmail($email)) {
         $_SESSION['message_ajout'] = "Adresse email invalide";
         header("Location: " . $_SERVER['PHP_SELF']);
@@ -229,8 +248,8 @@ if (isset($_POST['action']) && $_POST['action'] === "demander_ajout") {
     }
 
     // verifier si l email existe deja
-    if (file_exists("EmailsT.txt")) {
-        $emails = file("EmailsT.txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (file_exists(fileInFilesDir("EmailsT.txt"))) {
+        $emails = file(fileInFilesDir("EmailsT.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if (in_array($email, $emails)) {
             $_SESSION['message_ajout'] = "Cet email existe ";
             header("Location: " . $_SERVER['PHP_SELF']);
@@ -240,18 +259,18 @@ if (isset($_POST['action']) && $_POST['action'] === "demander_ajout") {
 
     // generer et envoyer le token de verification
     $token = genererTokenVerification();
-    
+
     // Initialiser le tableau de tokens 
     if (!isset($_SESSION['tokens_verification'])) {
         $_SESSION['tokens_verification'] = [];
     }
-    
+
     // Stocker le token 
     $_SESSION['tokens_verification'][$email] = [
         'token' => $token,
         'expiration' => time() + 86400 // 24 heures
     ];
-    
+
     if (envoyerLienVerification($email, $token)) {
         $_SESSION['message_ajout'] = "Un lien de vérification a été envoyé à $email. Veuillez vérifier votre boîte mail.";
     } else {
@@ -266,14 +285,14 @@ if (isset($_POST['action']) && $_POST['action'] === "demander_ajout") {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['action'] === "envoyer_emails" && !empty($_POST['sujet']) && !empty($_POST['message'])) {
     $sujet = $_POST['sujet'];
     $message = $_POST['message'];
-    
-    if (!file_exists("EmailsT.txt")) {
+
+    if (!file_exists(fileInFilesDir("EmailsT.txt"))) {
         $_SESSION['message_envoi'] = "Aucun email valide";
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
     }
-    
-    $emails = file("EmailsT.txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+    $emails = file(fileInFilesDir("EmailsT.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
     if (empty($emails)) {
         $_SESSION['message_envoi'] = "Aucun email valide";
@@ -306,7 +325,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
     } catch (Exception $e) {
         $_SESSION['message_envoi'] = "Erreur lors de l'envoi: {$mail->ErrorInfo}";
     }
-    
+
     header("Location: " . $_SERVER['PHP_SELF']);
     exit();
 }
@@ -323,6 +342,7 @@ unset($_SESSION['message_envoi']);
 
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <title>Gestion des Emails</title>
@@ -334,17 +354,21 @@ unset($_SESSION['message_envoi']);
             padding: 20px;
             background-color: #f4f4f4;
         }
+
         .container {
             max-width: 1000px;
             margin: 0 auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        h1, h2 {
+
+        h1,
+        h2 {
             color: #333;
         }
+
         .section {
             margin-bottom: 30px;
             padding: 20px;
@@ -352,32 +376,38 @@ unset($_SESSION['message_envoi']);
             border-radius: 5px;
             background-color: #f9f9f9;
         }
+
         .message {
             padding: 10px;
             margin: 10px 0;
             border-radius: 4px;
         }
+
         .success {
             background-color: #d4edda;
             color: #00ff00;
             border: 1px solid #c3e6cb;
         }
+
         .error {
             background-color: #f8d7da;
             color: #ff0000;
             border: 1px solid #f5c6cb;
         }
+
         form {
             margin-bottom: 15px;
         }
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], 
-        input[type="email"], 
-        input[type="file"], 
+
+        input[type="text"],
+        input[type="email"],
+        input[type="file"],
         textarea {
             width: 100%;
             padding: 8px;
@@ -386,6 +416,7 @@ unset($_SESSION['message_envoi']);
             border-radius: 4px;
             box-sizing: border-box;
         }
+
         input[type="submit"] {
             background-color: #0f0;
             color: white;
@@ -394,20 +425,24 @@ unset($_SESSION['message_envoi']);
             border-radius: 4px;
             cursor: pointer;
         }
+
         input[type="submit"]:hover {
             background-color: #0f0;
         }
+
         .fichiers {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 10px;
         }
+
         .fichier-item {
             padding: 10px;
             background-color: #e9ecef;
             border-radius: 4px;
             text-align: center;
         }
+
         .verification-section {
             background-color: #e7f3fe;
             border-left: 6px solid #2196F3;
@@ -416,10 +451,11 @@ unset($_SESSION['message_envoi']);
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Gestion des Emails</h1>
-        
+
         <!-- Section d'upload du fichier emails.txt -->
         <div class="section">
             <h2>Uploader le fichier emails.txt</h2>
@@ -434,38 +470,43 @@ unset($_SESSION['message_envoi']);
                 <input type="submit" value="Uploader">
             </form>
         </div>
-                <!-- Section des fichiers générés -->
+        <!-- Section des fichiers générés -->
+
         <div class="section">
-            <h2>Fichiers générés</h2>
-            <div class="fichiers">
-                <?php if (file_exists("emails.txt")): ?>
-                    <div class="fichier-item">
-                        <a href="emails.txt" download>emails.txt</a>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if (file_exists("EmailsT.txt")): ?>
-                    <div class="fichier-item">
-                        <a href="EmailsT.txt" download>EmailsT.txt</a>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if (file_exists("adressesNonValides.txt")): ?>
-                    <div class="fichier-item">
-                        <a href="adressesNonValides.txt" download>adressesNonValides.txt</a>
-                    </div>
-                <?php endif; ?>
-                
-                <?php
-                $domaineFiles = glob("emailDeDomaine_*.txt");
-                foreach($domaineFiles as $fichierDomaine):
-                    $nomFichier = basename($fichierDomaine);
-                ?>
-                    <div class="fichier-item">
-                        <a href='<?php echo $nomFichier; ?>' download><?php echo $nomFichier; ?></a>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+            <details>
+                <summary><b>VOIR LES EMAILS GENERES</b></summary>
+
+                <h2>Fichiers générés</h2>
+                <div class="fichiers">
+                    <?php if (file_exists(fileInFilesDir("emails.txt"))): ?>
+                        <div class="fichier-item">
+                            <a href="files/emails.txt" download>emails.txt</a>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (file_exists(fileInFilesDir("EmailsT.txt"))): ?>
+                        <div class="fichier-item">
+                            <a href="files/EmailsT.txt" download>EmailsT.txt</a>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (file_exists(fileInFilesDir("adressesNonValides.txt"))): ?>
+                        <div class="fichier-item">
+                            <a href="files/adressesNonValides.txt" download>adressesNonValides.txt</a>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php
+                    $domaineFiles = glob(fileInFilesDir("emailDeDomaine_*.txt"));
+                    foreach ($domaineFiles as $fichierDomaine):
+                        $nomFichier = basename($fichierDomaine);
+                    ?>
+                        <div class="fichier-item">
+                            <a href="files/<?=$nomFichier; ?>" download><?php echo $nomFichier; ?></a>
+                        </div>
+                    <?php endforeach; ?>
+            </details>
+        </div>
         <!-- Section d'ajout d'email avec vérification -->
         <div class="section">
             <h2>Ajouter une adresse email</h2>
@@ -474,14 +515,14 @@ unset($_SESSION['message_envoi']);
                     <?php echo $message_ajout; ?>
                 </div>
             <?php endif; ?>
-            
+
             <form action="" method="post" onsubmit="return validerFormulaire()">
                 <input type="hidden" name="action" value="demander_ajout">
                 <label for="email">Nouvel email :</label>
                 <input type="email" name="email" id="email" required>
                 <input type="submit" value="Vérifier l'email">
             </form>
-            
+
             <?php if (isset($_SESSION['tokens_verification']) && !empty($_SESSION['tokens_verification'])): ?>
                 <div class="verification-section">
                     <p>Un lien de vérification a été envoyé à votre adresse email. Veuillez vérifier votre boîte mail.</p>
@@ -489,7 +530,7 @@ unset($_SESSION['message_envoi']);
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Section d'envoi d'emails -->
         <div class="section">
             <h2>Envoyer un message à tous les emails</h2>
@@ -507,21 +548,23 @@ unset($_SESSION['message_envoi']);
                 <input type="submit" value="Envoyer à tous">
             </form>
         </div>
-        
 
-        </div>
+
+    </div>
+
     </div>
 
     <script>
-    function validerFormulaire() {
-        let email = document.getElementById("email").value;
-        let regex = /^[a-zA-Z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-        if (!regex.test(email)) {
-            alert("Adresse email invalide !");
-            return false;
+        function validerFormulaire() {
+            let email = document.getElementById("email").value;
+            let regex = /^[a-zA-Z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+            if (!regex.test(email)) {
+                alert("Adresse email invalide !");
+                return false;
+            }
+            return true;
         }
-        return true;
-    }
     </script>
 </body>
+
 </html>
